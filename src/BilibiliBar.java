@@ -120,7 +120,7 @@ public class BilibiliBar {
         writer.close();
     }
     public void write(BufferedWriter writer,SimpleFloor simpleFloor) throws IOException {
-        writer.write("###"+simpleFloor.getFloor()+"("+simpleFloor.getAuthor()+")"+"\t\t"+simpleFloor.getTime());
+        writer.write("### "+simpleFloor.getFloor()+"("+simpleFloor.getAuthor()+")"+"\t\t"+simpleFloor.getTime());
         writer.newLine();
         String[] texts=simpleFloor.getText().split("\n");
         for(int i=0;i<texts.length;i++){
