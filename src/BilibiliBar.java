@@ -4,8 +4,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -18,7 +20,7 @@ public class BilibiliBar {
     public static final String PARENT_CLASSNAME="l_post l_post_bright j_l_post clearfix  ";
     //要爬取的页面地址
     public static final String URL_BASE_NAME="https://tieba.baidu.com/p/6063219615";
-    public static final String DEFAULT_OUTPUT="Result.md";
+    public static final String DEFAULT_OUTPUT="ResultWithImage.md";
     private Queue<SimpleFloor> floors;
     private String url;
     private boolean seeLz;
@@ -81,9 +83,11 @@ public class BilibiliBar {
             Iterator<Element> modelIterator=userModels.iterator();
             //分析每个楼层。
             while (modelIterator.hasNext()){
+                List<String> imageList=new ArrayList<String>();
                 SimpleFloor floorBean=new SimpleFloor();
                 Element floor=modelIterator.next();
                 Element pAuthor=floor.selectFirst("ul[class=\"p_author\"]");
+                Elements imageElements=floor.select("[class=\"BDE_Image\"]");
                 //Element authorElement=pAuthor.selectFirst("div[class=\"p_author_face \"]");
                 Element authorElement=pAuthor.selectFirst("img");
                 String author=authorElement.attr("username");
@@ -96,6 +100,14 @@ public class BilibiliBar {
                 Element textElement=mainElement.selectFirst("div[class=\""+CLASSNAME+"\"]");
                 String text=textElement.text();
                 floorBean.setText(text);
+                Iterator<Element> imageIterator=imageElements.iterator();
+                while (imageIterator.hasNext()){
+                    Element imageTemp=imageIterator.next();
+                    String imageUrl=imageTemp.attr("src");
+                    String imagePath=downloadPicture(imageUrl);
+                    imageList.add(imagePath);
+                }
+                floorBean.setImages(imageList);
                 Element wrapElement=mainElement.selectFirst("div[class=\"post-tail-wrap\"]");
                 Elements tailInfo=wrapElement.select("span[class=\"tail-info\"]");
                 for(Iterator<Element> iterator=tailInfo.iterator();iterator.hasNext();){
@@ -125,6 +137,10 @@ public class BilibiliBar {
         String[] texts=simpleFloor.getText().split("\n");
         for(int i=0;i<texts.length;i++){
             writer.write(texts[i]);
+            writer.newLine();
+        }
+        for (int i=0;i<simpleFloor.getImages().size();i++) {
+            writer.write("![](./"+simpleFloor.getImages().get(i)+")");
             writer.newLine();
         }
         writer.flush();
@@ -167,5 +183,41 @@ public class BilibiliBar {
             }
         }
         return returnStr;
+    }
+    public String downloadPicture(String urlList) {
+        String[] urlSpilt=urlList.split("/");
+        String name=urlSpilt[urlSpilt.length-1];
+        URL url = null;
+        int imageNumber = 0;
+
+        try {
+            url = new URL(urlList);
+            DataInputStream dataInputStream = new DataInputStream(url.openStream());
+
+            String imageName =  "image/"+name;
+            System.out.println(imageName);
+
+            File file=new File(imageName);
+            file.createNewFile();
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+            byte[] buffer = new byte[1024];
+            int length;
+
+            while ((length = dataInputStream.read(buffer)) > 0) {
+                output.write(buffer, 0, length);
+            }
+            byte[] context=output.toByteArray();
+            fileOutputStream.write(output.toByteArray());
+            dataInputStream.close();
+            fileOutputStream.close();
+            return imageName;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
